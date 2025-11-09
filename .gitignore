@@ -117,6 +117,18 @@ ipython_config.py
 .pdm-python
 .pdm-build/
 
+# Poetry
+.poetry/
+
+# Trained models and data
+REST/models_storage/
+REST/data/
+
+# IDE files
+.idea/
+.vscode/
+
+
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
 #pixi.lock
