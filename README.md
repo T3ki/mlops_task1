@@ -16,8 +16,9 @@
 
 Для запуска через терминал: 
 1. git clone https://github.com/T3ki/mlops_task1 
-2. cd папка проекта 
-3. uvicorn src.mlops_hw1.main:app --host localhost --port 8000
+2. cd mlops_task1
+3. git checkout dev
+4. uvicorn src.mlops_hw1.main:app --host localhost --port 8000
    переходим по ссылке, проверяем, что работает http://localhost:8000/status
 
 ### Реализация gRPC процедур
@@ -49,5 +50,6 @@ Delete message: Model deleted successfully
 
 После запуска API в отдельном терминале: 
 
-1. cd папка проекта
-2. streamlit run dashboard.py# mlops_task1
+1. cd mlops_task1
+2. git checkout dev
+3. streamlit run dashboard.py
