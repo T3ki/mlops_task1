@@ -53,3 +53,78 @@ Delete message: Model deleted successfully
 1. cd mlops_task1
 2. git checkout dev
 3. poetry run streamlit run dashboard.py
+
+
+
+# mlops_task2
+
+**Что добавлено:**
+
+- Хранение обученных моделей в Minio (S3) через src/mlops_hw1/storage.py.
+- Хранение и версионирование обучающих датасетов через DVC с remote в Minio.
+- Docker-образ сервиса (через Dockerfile).
+- Запуск Minio и сервиса через docker-compose.yml.
+
+**Основные файлы HW2:**
+
+-- Dockerfile
+
+-- docker-compose.yml
+
+-- .dvc/                     # конфигурация DVC (remote на Minio)
+
+-- data/
+
+----  train_datasets/         # *.csv.dvc (сырые .csv хранятся в Minio через DVC)
+
+--src/mlops_hw1/
+
+----  models.py               # логика моделей + работа с S3 и DVC
+
+----  storage.py              # работа с S3 (Minio) для моделей
+
+----  dvc_utils.py            # сохранение датасетов и вызовы DVC (dvc add + dvc push)
+
+### Запуск через docker-compose
+
+В корне репозитория:
+
+```
+docker compose up --build
+```
+
+Поднимаются сервисы:
+
+- Minio
+   - S3 API: http://localhost:9000
+   - Web UI: http://localhost:9001
+- Приложение
+   - REST API (FastAPI): http://localhost:8000
+   - gRPC: порт 50051
+
+### Настройка Minio
+
+1. Открыть в браузере http://localhost:9001.
+   - Логин: minioadmin
+   - Пароль: minioadmin123
+2. Создать бакеты:
+   - mlops-hw1-models — для обученных моделей;
+   - mlops-hw1-dvc — для датасетов, которыми управляет DVC.
+
+### Как пользоваться сервисом
+
+
+1. Открыть Swagger: http://localhost:8000/docs.
+2. Проверить статус:
+      - GET /status
+3. Обучить модель:
+      - POST /train
+      - В ответе приходит model_id
+      - Проверить в Minio:
+            что в бакете mlops-hw1-models появился models/<model_id>.joblib
+            что в бакете mlops-hw1-dvc появились новые объекты от DVC
+4. Сделать предсказания: 
+      - POST /predict с тем же model_id и features
+5. Управление моделями:
+      - DELETE /models/{model_id} — удаляет модель локально и из Minio
+      - POST /models/{model_id}/retrain — переобучает модель на новых данных и обновляет версию в Minio
