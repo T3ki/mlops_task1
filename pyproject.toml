@@ -1,31 +1,33 @@
-[project]
+[tool.poetry]
 name = "mlops-hw1"
 version = "0.1.0"
 description = "A service for training and using ML models"
-authors = [
-    {name = "SofyaOstankova",email = "smzelnik@edu.hse.ru"}
-]
+authors = ["SofyaOstankova <smzelnik@edu.hse.ru>"]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "fastapi[all] (>=0.120.4,<0.121.0)",
-    "uvicorn[standard] (>=0.27.0,<0.28.0)",
-    "scikit-learn (>=1.7.2,<2.0.0)",
-    "pandas (>=2.3.3,<3.0.0)",
-    "joblib (>=1.5.2,<2.0.0)",
-    "grpcio (>=1.66.2,<2.0.0)", 
-    "grpcio-tools (>=1.66.2,<2.0.0)" ,
-    "streamlit>=1.32.0",
-    "numpy<2",
-    "pyarrow>=15.0.0"
+packages = [
+    { include = "mlops_hw1", from = "src" }
 ]
 
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+
+fastapi = { version = ">=0.120.4,<0.121.0", extras = ["all"] }
+uvicorn = { version = ">=0.27.0,<0.28.0", extras = ["standard"] }
+scikit-learn = ">=1.7.2,<2.0.0"
+pandas = ">=2.3.3,<3.0.0"
+joblib = ">=1.5.2,<2.0.0"
+grpcio = ">=1.66.2,<2.0.0"
+grpcio-tools = ">=1.66.2,<2.0.0"
+streamlit = ">=1.32.0"
+numpy = "<2"
+pyarrow = ">=15.0.0"
+boto3 = ">=1.41.5,<2.0.0"
+dvc = { version = ">=3.64.0,<4.0.0", extras = ["s3"] }
+python-dotenv = ">=1.2.1,<2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = ">=0.14.3,<0.15.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[dependency-groups]
-dev = [
-    "ruff (>=0.14.3,<0.15.0)"
-]

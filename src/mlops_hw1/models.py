@@ -6,6 +6,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from typing import List, Dict, Any
 import pandas as pd
+from .dvc_utils import save_dataset_with_dvc
+
+from .storage import (
+    upload_model_to_s3,
+    download_model_from_s3,
+    delete_model_from_s3,
+)
 
 # Создаем папку для хранения моделей, если ее нет
 MODELS_DIR = Path("models_storage")
@@ -28,31 +35,27 @@ def train_model(
 ) -> str:
     """
     Обучает модель и сохраняет ее.
-
-    :param model_name: Имя модели из AVAILABLE_MODELS.
-    :param hyperparams: Гиперпараметры для модели.
-    :param features: Признаки для обучения.
-    :param target: Целевая переменная.
-    :return: Уникальный ID обученной модели.
     """
     if model_name not in AVAILABLE_MODELS:
         raise ValueError(f"Model '{model_name}' is not available.")
 
+    # Генерируем ID модели сразу, чтобы использовать его и для датасета, и для файла модели
+    model_id = f"{model_name}_{uuid.uuid4().hex[:8]}"
+
+    # Сохраняем датасет и отправляем его в DVC/Minio
+    save_dataset_with_dvc(features, target, model_id)
+
     model_class = AVAILABLE_MODELS[model_name]
-    
-    # Создаем экземпляр модели с переданными гиперпараметрами
     model = model_class(**hyperparams)
-    
+
     # Обучаем модель
     model.fit(features, target)
-    
-    # Генерируем уникальный ID и путь для сохранения
-    model_id = f"{model_name}_{uuid.uuid4().hex[:8]}"
-    save_path = MODELS_DIR / f"{model_id}.joblib"
-    
+
     # Сохраняем модель
+    save_path = MODELS_DIR / f"{model_id}.joblib"
     joblib.dump(model, save_path)
-    
+    upload_model_to_s3(save_path, model_id)
+
     return model_id
 
 
@@ -67,7 +70,13 @@ def predict_with_model(model_id: str, features: List[List[float]]) -> List[int]:
     save_path = MODELS_DIR / f"{model_id}.joblib"
 
     if not save_path.exists():
-        raise FileNotFoundError(f"Model with id '{model_id}' not found.")
+        # Пробуем скачать модель из S3
+        try:
+            download_model_from_s3(save_path, model_id)
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Model with id '{model_id}' not found locally or in S3. {e}"
+            )
 
     # Загружаем обученную модель
     model = joblib.load(save_path)
@@ -87,10 +96,12 @@ def delete_model(model_id: str) -> None:
     """
     model_path = MODELS_DIR / f"{model_id}.joblib"
 
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model with id '{model_id}' not found.")
+    # Удаляем локальный файл, если есть
+    if model_path.exists():
+        os.remove(model_path)
 
-    os.remove(model_path)
+    # Удаляем из S3
+    delete_model_from_s3(model_id)
 
 def retrain_model(
     model_id: str,
@@ -129,3 +140,6 @@ def retrain_model(
     
     # Перезаписываем старый файл модели
     joblib.dump(model, save_path)
+
+    # Обновляем модель в S3
+    upload_model_to_s3(save_path, model_id)
