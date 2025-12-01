@@ -67,15 +67,23 @@ Delete message: Model deleted successfully
 
 **Основные файлы HW2:**
 
-Dockerfile
-docker-compose.yml
-.dvc/                     # конфигурация DVC (remote на Minio)
-data/
-  train_datasets/         # *.csv.dvc (сырые .csv хранятся в Minio через DVC)
-src/mlops_hw1/
-  models.py               # логика моделей + работа с S3 и DVC
-  storage.py              # работа с S3 (Minio) для моделей
-  dvc_utils.py            # сохранение датасетов и вызовы DVC (dvc add + dvc push)
+-- Dockerfile
+
+-- docker-compose.yml
+
+-- .dvc/                     # конфигурация DVC (remote на Minio)
+
+-- data/
+
+----  train_datasets/         # *.csv.dvc (сырые .csv хранятся в Minio через DVC)
+
+--src/mlops_hw1/
+
+----  models.py               # логика моделей + работа с S3 и DVC
+
+----  storage.py              # работа с S3 (Minio) для моделей
+
+----  dvc_utils.py            # сохранение датасетов и вызовы DVC (dvc add + dvc push)
 
 ### Запуск через docker-compose
 
