@@ -80,7 +80,7 @@ Delete message: Model deleted successfully
 
 --src/mlops_hw1/
 
-----  models.py               # логика моделей + работа с S3 и DVC
+----  models.py               # логика моделей + работа с S3 и DVC + MLflow
 
 ----  storage.py              # работа с S3 (Minio) для моделей
 
