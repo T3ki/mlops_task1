@@ -14,6 +14,9 @@ from .storage import (
     delete_model_from_s3,
 )
 
+from .tracking import init_mlflow, mlflow, MLFLOW_AVAILABLE
+from sklearn.metrics import accuracy_score
+
 # Создаем папку для хранения моделей, если ее нет
 MODELS_DIR = Path("models_storage")
 MODELS_DIR.mkdir(exist_ok=True)
@@ -34,12 +37,12 @@ def train_model(
     target: List[int]
 ) -> str:
     """
-    Обучает модель и сохраняет ее.
+    Обучает модель и сохраняет ее, плюс трекает обучение в MLflow.
     """
     if model_name not in AVAILABLE_MODELS:
         raise ValueError(f"Model '{model_name}' is not available.")
 
-    # Генерируем ID модели сразу, чтобы использовать его и для датасета, и для файла модели
+    # Генерируем ID модели, чтобы использовать его и для датасета, и для файла модели
     model_id = f"{model_name}_{uuid.uuid4().hex[:8]}"
 
     # Сохраняем датасет и отправляем его в DVC/Minio
@@ -48,13 +51,47 @@ def train_model(
     model_class = AVAILABLE_MODELS[model_name]
     model = model_class(**hyperparams)
 
-    # Обучаем модель
-    model.fit(features, target)
+    # Попробуем трекать обучение в MLflow
+    if MLFLOW_AVAILABLE and init_mlflow():
+        try:
+            with mlflow.start_run(run_name=model_id):
+                # Логируем параметры
+                mlflow.log_param("model_name", model_name)
+                mlflow.log_params(hyperparams)
+                mlflow.log_param("model_id", model_id)
+                mlflow.log_metric("train_samples", len(target))
+                if features:
+                    mlflow.log_metric("train_features_dim", len(features[0]))
 
-    # Сохраняем модель
-    save_path = MODELS_DIR / f"{model_id}.joblib"
-    joblib.dump(model, save_path)
-    upload_model_to_s3(save_path, model_id)
+                # Обучаем модель
+                model.fit(features, target)
+
+                # Метрика на train
+                y_pred = model.predict(features)
+                acc = accuracy_score(target, y_pred)
+                mlflow.log_metric("train_accuracy", acc)
+
+                # Сохраняем модель локально
+                save_path = MODELS_DIR / f"{model_id}.joblib"
+                joblib.dump(model, save_path)
+                upload_model_to_s3(save_path, model_id)
+
+                # Логируем модель в MLflow
+                mlflow.sklearn.log_model(model, "model")
+
+        except Exception as e:
+            logger.error("MLflow tracking failed, training without MLflow: %s", e)
+            # обучаем без MLflow
+            model.fit(features, target)
+            save_path = MODELS_DIR / f"{model_id}.joblib"
+            joblib.dump(model, save_path)
+            upload_model_to_s3(save_path, model_id)
+    else:
+        # MLflow недоступен — просто обучаем модель
+        model.fit(features, target)
+        save_path = MODELS_DIR / f"{model_id}.joblib"
+        joblib.dump(model, save_path)
+        upload_model_to_s3(save_path, model_id)
 
     return model_id
 
@@ -111,18 +148,13 @@ def retrain_model(
 ) -> None:
     """
     Переобучает существующую модель на новых данных и/или с новыми гиперпараметрами.
-
-    :param model_id: ID модели для переобучения.
-    :param hyperparams: Новые гиперпараметры для модели.
-    :param features: Новые признаки для обучения.
-    :param target: Новая целевая переменная.
+    Логирует переобучение в MLflow.
     """
     save_path = MODELS_DIR / f"{model_id}.joblib"
     if not save_path.exists():
         raise FileNotFoundError(f"Model with id '{model_id}' not found for retraining.")
 
-    # Извлекаем имя класса модели из ID
-    # Например, из "logreg_a1b2c3d4" получаем "logreg"
+    # Извлекаем имя класса модели из ID, например, из "logreg_a1b2c3d4" -> "logreg"
     try:
         model_name = model_id.split('_')[0]
         if model_name not in AVAILABLE_MODELS:
@@ -131,15 +163,43 @@ def retrain_model(
         raise ValueError(f"Invalid model_id format: '{model_id}'. Expected 'name_uuid'.")
 
     model_class = AVAILABLE_MODELS[model_name]
-    
-    # Создаем новый экземпляр модели с новыми гиперпараметрами
     model = model_class(**hyperparams)
-    
-    # Обучаем на новых данных
-    model.fit(features, target)
-    
-    # Перезаписываем старый файл модели
-    joblib.dump(model, save_path)
 
-    # Обновляем модель в S3
-    upload_model_to_s3(save_path, model_id)
+    # Попробуем трекать переобучение в MLflow
+    if MLFLOW_AVAILABLE and init_mlflow():
+        try:
+            with mlflow.start_run(run_name=f"{model_id}_retrain"):
+                mlflow.log_param("model_name", model_name)
+                mlflow.log_params(hyperparams)
+                mlflow.log_param("model_id", model_id)
+                mlflow.log_param("run_type", "retrain")
+
+                mlflow.log_metric("train_samples", len(target))
+                if features:
+                    mlflow.log_metric("train_features_dim", len(features[0]))
+
+                # Обучаем на новых данных
+                model.fit(features, target)
+
+                # Метрика на train
+                y_pred = model.predict(features)
+                acc = accuracy_score(target, y_pred)
+                mlflow.log_metric("train_accuracy", acc)
+
+                # Перезаписываем старый файл модели
+                joblib.dump(model, save_path)
+                upload_model_to_s3(save_path, model_id)
+
+                # Логируем модель в MLflow
+                mlflow.sklearn.log_model(model, "model")
+
+        except Exception as e:
+            logger.error("MLflow tracking failed in retrain_model, retraining without MLflow: %s", e)
+            model.fit(features, target)
+            joblib.dump(model, save_path)
+            upload_model_to_s3(save_path, model_id)
+    else:
+        # MLflow недоступен, тогда просто переобучаем
+        model.fit(features, target)
+        joblib.dump(model, save_path)
+        upload_model_to_s3(save_path, model_id)

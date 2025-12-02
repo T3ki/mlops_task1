@@ -60,10 +60,11 @@ Delete message: Model deleted successfully
 
 **Что добавлено:**
 
-- Хранение обученных моделей в Minio (S3) через src/mlops_hw1/storage.py.
-- Хранение и версионирование обучающих датасетов через DVC с remote в Minio.
-- Docker-образ сервиса (через Dockerfile).
-- Запуск Minio и сервиса через docker-compose.yml.
+- Хранение обученных моделей в Minio (S3) через src/mlops_hw1/storage.py
+- Хранение и версионирование обучающих датасетов через DVC с remote в Minio
+- Docker-образ сервиса (через Dockerfile)
+- Запуск Minio и сервиса через docker-compose.yml
+- Трекинг обученных моделей в mlflow
 
 **Основные файлы HW2:**
 
@@ -85,6 +86,8 @@ Delete message: Model deleted successfully
 
 ----  dvc_utils.py            # сохранение датасетов и вызовы DVC (dvc add + dvc push)
 
+---- tracking.py              # Инициализация MLflow
+
 ### Запуск через docker-compose
 
 В корне репозитория:
@@ -101,6 +104,7 @@ docker compose up --build
 - Приложение
    - REST API (FastAPI): http://localhost:8000
    - gRPC: порт 50051
+- MLflow: http://localhost:5000
 
 ### Настройка Minio
 
@@ -110,9 +114,9 @@ docker compose up --build
 2. Создать бакеты:
    - mlops-hw1-models — для обученных моделей;
    - mlops-hw1-dvc — для датасетов, которыми управляет DVC.
+   - mlops-hw1-mlflow - для артефактов моделей из mlflow
 
 ### Как пользоваться сервисом
-
 
 1. Открыть Swagger: http://localhost:8000/docs.
 2. Проверить статус:
@@ -123,8 +127,9 @@ docker compose up --build
       - Проверить в Minio:
             что в бакете mlops-hw1-models появился models/<model_id>.joblib
             что в бакете mlops-hw1-dvc появились новые объекты от DVC
+      - Проверить, что в mlflow в эксперименте mlops_hw1 появилась информация о модели и сама модель
 4. Сделать предсказания: 
       - POST /predict с тем же model_id и features
 5. Управление моделями:
       - DELETE /models/{model_id} — удаляет модель локально и из Minio
-      - POST /models/{model_id}/retrain — переобучает модель на новых данных и обновляет версию в Minio
+      - POST /models/{model_id}/retrain — переобучает модель на новых данных, обновляет версию в Minio, добавляет новую модель в MLflow
