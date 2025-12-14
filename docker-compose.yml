@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   minio:
     image: minio/minio
@@ -41,7 +39,9 @@ services:
       - ./data:/app/data
 
   mlflow:
-    image: mlops_task1-app
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: mlflow
     depends_on:
       - minio
