@@ -153,7 +153,7 @@ docker compose up --build
   Использована фикстура `mock_s3` с `@mock_aws` и патч на `boto3.client`, чтобы тест не зависел от реального MinIO и переменных окружения.
 
 Запуск всех тестов:
-`poetry run pytest tests/ -v`
+```poetry run pytest tests/ -v```
 
 ### Makefile
 В корневой директории проекта добавлен Makefile.
@@ -163,3 +163,9 @@ docker compose up --build
    - make lint — проверка стиля кода с помощью black (форматирование) и flake8 (статический анализ), не меняет файлы
    - make build-push — сборка Docker-образа и загрузка его в Docker Hub
    - make format - автоматически форматирует код с помощью black (применяет изменения к файлам в src/ и tests/).
+
+Финальная проверка:
+1. ```make test```
+2. ```make lint```
+3. ```make build-push```
+
