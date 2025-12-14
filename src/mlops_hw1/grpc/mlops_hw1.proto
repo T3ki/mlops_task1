@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package mlops_hw1;
+
+service MLService {
+  rpc GetStatus(Empty) returns (StatusResponse);
+  rpc ListModels(Empty) returns (ListModelsResponse);
+  rpc Train(TrainRequest) returns (TrainResponse);
+  rpc Predict(PredictRequest) returns (PredictResponse);
+  rpc DeleteModel(DeleteRequest) returns (DeleteResponse);
+  rpc Retrain(RetrainRequest) returns (RetrainResponse);
+}
+
+message Empty {}
+
+message StatusResponse {
+  string status = 1;
+}
+
+message ListModelsResponse {
+  repeated string models = 1;
+}
+
+message TrainRequest {
+  string model_name = 1;
+  map<string, string> hyperparams = 2; 
+  repeated FeaturesRow features = 3;
+  repeated int32 target = 4;
+}
+
+message FeaturesRow {
+  repeated float values = 1;
+}
+
+message TrainResponse {
+  string model_id = 1;
+  string message = 2;
+}
+
+message PredictRequest {
+  string model_id = 1;
+  repeated FeaturesRow features = 2;
+}
+
+message PredictResponse {
+  repeated int32 predictions = 1;
+}
+
+message DeleteRequest {
+  string model_id = 1;
+}
+
+message DeleteResponse {
+  string message = 1;
+}
+
+message RetrainRequest {
+  string model_id = 1;
+  map<string, string> hyperparams = 2;
+  repeated FeaturesRow features = 3;
+  repeated int32 target = 4;
+}
+
+message RetrainResponse {
+  string message = 1;
+}

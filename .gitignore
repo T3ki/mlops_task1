@@ -1,3 +1,5 @@
+/models_storage/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -116,6 +118,18 @@ ipython_config.py
 #pdm.toml
 .pdm-python
 .pdm-build/
+
+# Poetry
+.poetry/
+
+# Trained models and data
+REST/models_storage/
+REST/data/
+
+# IDE files
+.idea/
+.vscode/
+
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
